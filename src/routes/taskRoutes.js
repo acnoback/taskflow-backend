@@ -16,6 +16,13 @@ router.post(
   taskController.createTask
 );
 router.patch(
+  "/:taskId/status",
+  allowRoles(ROLES.ADMIN, ROLES.USER),
+  taskController.updateTaskValidation,
+  validateRequest,
+  taskController.updateTask
+);
+router.patch(
   "/:taskId/update",
   allowRoles(ROLES.ADMIN, ROLES.USER),
   taskController.updateTaskValidation,

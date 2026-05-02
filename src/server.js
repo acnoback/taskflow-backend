@@ -9,6 +9,8 @@ const authRoutes = require("./routes/authRoutes");
 const departmentRoutes = require("./routes/departmentRoutes");
 const userRoutes = require("./routes/userRoutes");
 const taskRoutes = require("./routes/taskRoutes");
+const chatRoutes = require("./routes/chatRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const { ensureHeadUser } = require("./services/seedService");
 const { startTaskCleanupScheduler } = require("./services/scheduler");
@@ -41,6 +43,8 @@ async function startServer() {
   app.use("/api/departments", departmentRoutes);
   app.use("/api/users", userRoutes);
   app.use("/api/tasks", taskRoutes);
+  app.use("/api/chats", chatRoutes);
+  app.use("/api/reports", reportRoutes);
   app.use("/api/dashboard", dashboardRoutes);
 
   app.use(errorHandler);

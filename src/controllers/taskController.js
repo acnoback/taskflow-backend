@@ -1,8 +1,10 @@
 const { body, param, query } = require("express-validator");
 const Task = require("../models/Task");
 const User = require("../models/User");
+const Message = require("../models/Message");
+const Report = require("../models/Report");
 const ApiError = require("../utils/ApiError");
-const { ROLES, TASK_STATUS } = require("../utils/constants");
+const { ROLES, TASK_STATUS, MESSAGE_TYPES, REFERENCE_TYPES } = require("../utils/constants");
 const { logActivity } = require("../services/activityService");
 
 const createTaskValidation = [
@@ -45,6 +47,19 @@ async function createTask(req, res, next) {
       ]
     });
 
+    await Message.create({
+      departmentId: req.user.departmentId,
+      senderId: req.user._id,
+      type: MESSAGE_TYPES.TASK_CREATED,
+      text: description || `Task created: ${title}`,
+      taskId: task._id,
+      referenceType: REFERENCE_TYPES.TASK,
+      referenceId: task._id.toString(),
+      referenceTitle: title,
+      referencePreview: description || "New department task",
+      sentAt: new Date()
+    });
+
     await logActivity({
       type: "TASK_CREATED",
       message: `${req.user.fullName} assigned "${title}" to ${users.length} user(s)`,
@@ -64,7 +79,8 @@ async function createTask(req, res, next) {
 const listTasksValidation = [
   query("status").optional().isString(),
   query("assignedUserId").optional().isMongoId(),
-  query("updatedSince").optional().isISO8601()
+  query("updatedSince").optional().isISO8601(),
+  query("departmentId").optional().isMongoId()
 ];
 
 async function listTasks(req, res, next) {
@@ -138,6 +154,37 @@ async function updateTask(req, res, next) {
     task.completedAt = status === TASK_STATUS.COMPLETED ? new Date() : null;
     task.archived = false;
     await task.save();
+
+    if (req.user.role === ROLES.USER) {
+      await Report.create({
+        title: task.title,
+        description: message || task.description,
+        status,
+        departmentId: task.departmentId,
+        taskId: task._id,
+        reportedBy: req.user._id,
+        assignedBy: task.assignedBy,
+        deadline: task.deadline,
+        timeline: task.updates.map((update) => ({
+          label: update.status,
+          timestamp: update.timestamp
+        })),
+        reportedAt: new Date()
+      });
+    }
+
+    await Message.create({
+      departmentId: task.departmentId,
+      senderId: req.user._id,
+      type: status === TASK_STATUS.COMPLETED ? MESSAGE_TYPES.TASK_COMPLETED : MESSAGE_TYPES.TASK_UPDATED,
+      text: message || `${task.title} updated to ${status}`,
+      taskId: task._id,
+      referenceType: REFERENCE_TYPES.TASK,
+      referenceId: task._id.toString(),
+      referenceTitle: task.title,
+      referencePreview: message || status,
+      sentAt: new Date()
+    });
 
     const activityType = req.user.role === ROLES.USER ? "TASK_REPORTED" : "TASK_UPDATED";
 

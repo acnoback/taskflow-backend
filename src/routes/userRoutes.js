@@ -9,6 +9,13 @@ const router = express.Router();
 router.use(authenticate);
 router.get("/", userController.listUsersValidation, validateRequest, userController.listUsers);
 router.post(
+  "/admin",
+  allowRoles(ROLES.HEAD),
+  userController.createAdminValidation,
+  validateRequest,
+  userController.createAdmin
+);
+router.post(
   "/admins",
   allowRoles(ROLES.HEAD),
   userController.createAdminValidation,
@@ -23,11 +30,25 @@ router.delete(
   userController.removeAdmin
 );
 router.post(
+  "/user",
+  allowRoles(ROLES.HEAD, ROLES.ADMIN),
+  userController.createUserValidation,
+  validateRequest,
+  userController.createUser
+);
+router.post(
   "/users",
   allowRoles(ROLES.HEAD, ROLES.ADMIN),
   userController.createUserValidation,
   validateRequest,
   userController.createUser
+);
+router.delete(
+  "/:userId",
+  allowRoles(ROLES.HEAD, ROLES.ADMIN),
+  userController.manageUserValidation,
+  validateRequest,
+  userController.deleteUser
 );
 router.delete(
   "/users/:userId",
